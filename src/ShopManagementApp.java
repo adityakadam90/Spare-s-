@@ -30,6 +30,7 @@ public class ShopManagementApp extends JFrame {
         JButton Refreshbtn = new JButton("Refresh");
         JButton delars = new JButton("Delars_info");
         JButton adddealar = new JButton("add Dealar");
+        JButton updateQn = new JButton("updateQuantity");
 
         searchField = new JTextField();
 
@@ -46,9 +47,10 @@ public class ShopManagementApp extends JFrame {
         Refreshbtn.addActionListener(e -> refresh());
         delars.addActionListener(e->Delars());
         adddealar.addActionListener(e->addDealer());
+        updateQn.addActionListener(e->updateProductQn());
 
         // Add components to the frame
-        JPanel buttonPanel = new JPanel(new GridLayout(11, 1));
+        JPanel buttonPanel = new JPanel(new GridLayout(12, 1));
         buttonPanel.add(Refreshbtn);
         buttonPanel.add(viewProductsButton);
         buttonPanel.add(viewSalesButton);
@@ -60,6 +62,7 @@ public class ShopManagementApp extends JFrame {
         buttonPanel.add(manageMechanicsButton);
         buttonPanel.add(delars);
         buttonPanel.add(adddealar);
+        buttonPanel.add(updateQn);
 
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -186,7 +189,7 @@ public class ShopManagementApp extends JFrame {
                         updateProductStmt.executeUpdate();
 
                         // Record the sale
-                        PreparedStatement insertSaleStmt = connection.prepareStatement("INSERT INTO sales (product_id, quantity, total_price, sale_date) VALUES (?, ?, ?, )");
+                        PreparedStatement insertSaleStmt = connection.prepareStatement("INSERT INTO sales (product_id, quantity, total_price, sale_date) VALUES (?, ?, ?, CURDATE())");
                         insertSaleStmt.setInt(1, productId);
                         insertSaleStmt.setInt(2, quantitySold);
                         insertSaleStmt.setDouble(3, totalPrice);
@@ -363,6 +366,27 @@ public class ShopManagementApp extends JFrame {
             ps.close();
         }catch (SQLException e) {
             JOptionPane.showMessageDialog(this,"error occur try Again..!");
+        }
+    }
+    private void updateProductQn() {
+        String query = "update products set quantity = ? where id = ?;";
+        try {
+            PreparedStatement ps = connection.prepareStatement(query);
+            int pid = Integer.parseInt(JOptionPane.showInputDialog(this,"enter product id : "));
+            int quantity = Integer.parseInt(JOptionPane.showInputDialog(this,"enter product quantity : "));
+
+            ps.setInt(2,pid);
+            ps.setInt(1,quantity);
+             int afr = ps.executeUpdate();
+             if(afr > 0) {
+                 JOptionPane.showMessageDialog(this,"succesfully updated..");
+             }else {
+                 JOptionPane.showMessageDialog(this,"Product not here...!");
+
+             }
+
+        }catch (SQLException e) {
+            JOptionPane.showMessageDialog(this,"error at Update product quantity..!");
         }
     }
     private void addDealer() {
