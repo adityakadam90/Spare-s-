@@ -11,7 +11,7 @@ public class ShopManagementApp extends JFrame {
     private JTextField searchField;
 
     public ShopManagementApp() {
-        super("*****  Ganesh Auto-Mobile Bambwade ******");
+        super("__________________________________________________________________________________________________________Ganesh Auto-Mobile Bambwade__________________________________________________________________________________________________________");
 
         // Initialize GUI components
         tableModel = new DefaultTableModel();
@@ -372,19 +372,21 @@ public class ShopManagementApp extends JFrame {
         String query = "update products set quantity = ? where id = ?;";
         try {
             PreparedStatement ps = connection.prepareStatement(query);
-            int pid = Integer.parseInt(JOptionPane.showInputDialog(this,"enter product id : "));
-            int quantity = Integer.parseInt(JOptionPane.showInputDialog(this,"enter product quantity : "));
+            String pidstr = JOptionPane.showInputDialog(this,"enter product id : ");
+           if(pidstr != null && !pidstr.trim().isEmpty()) {
+               int pid = Integer.parseInt(pidstr);
+               int quantity = Integer.parseInt(JOptionPane.showInputDialog(this, "enter product quantity : "));
 
-            ps.setInt(2,pid);
-            ps.setInt(1,quantity);
-             int afr = ps.executeUpdate();
-             if(afr > 0) {
-                 JOptionPane.showMessageDialog(this,"succesfully updated..");
-             }else {
-                 JOptionPane.showMessageDialog(this,"Product not here...!");
+               ps.setInt(2, pid);
+               ps.setInt(1, quantity);
+               int afr = ps.executeUpdate();
+               if (afr > 0) {
+                   JOptionPane.showMessageDialog(this, "succesfully updated..");
+               } else {
+                   JOptionPane.showMessageDialog(this, "Product not here...!");
 
-             }
-
+               }
+           }
         }catch (SQLException e) {
             JOptionPane.showMessageDialog(this,"error at Update product quantity..!");
         }
@@ -444,15 +446,18 @@ class ManageMechanicsFrame extends JFrame {
         JButton addMechanicButton = new JButton("Add Mechanic");
         JButton deleteMechanicButton = new JButton("Delete Mechanic");
         JButton showMechanicsButton = new JButton("Show Mechanics");
+        JButton updateMech = new JButton("update Mech");
 
         addMechanicButton.addActionListener(e -> addMechanic());
         deleteMechanicButton.addActionListener(e -> deleteMechanic());
         showMechanicsButton.addActionListener(e -> viewMechanics());
+        updateMech.addActionListener(e->updateMechanic());
 
-        JPanel buttonPanel = new JPanel(new GridLayout(3, 1));
+        JPanel buttonPanel = new JPanel(new GridLayout(4, 1));
         buttonPanel.add(addMechanicButton);
         buttonPanel.add(deleteMechanicButton);
         buttonPanel.add(showMechanicsButton);
+        buttonPanel.add(updateMech);
 
         Container contentPane = getContentPane();
         contentPane.add(scrollPane, BorderLayout.CENTER);
@@ -570,6 +575,4 @@ class ManageMechanicsFrame extends JFrame {
             }
         }
     }
-
-
 }
