@@ -11,7 +11,7 @@ public class ShopManagementApp extends JFrame {
     private JTextField searchField;
 
     public ShopManagementApp() {
-        super("__________________________________________________________________________________________________________Ganesh Auto-Mobile Bambwade__________________________________________________________________________________________________________");
+        super("_Ganesh Auto-Mobile Bambwade____");
 
         // Initialize GUI components
         tableModel = new DefaultTableModel();
@@ -31,6 +31,7 @@ public class ShopManagementApp extends JFrame {
         JButton delars = new JButton("Delars_info");
         JButton adddealar = new JButton("add Dealar");
         JButton updateQn = new JButton("updateQuantity");
+        JButton upadateDeal = new JButton("updateDeal");
 
         searchField = new JTextField();
 
@@ -48,9 +49,10 @@ public class ShopManagementApp extends JFrame {
         delars.addActionListener(e->Delars());
         adddealar.addActionListener(e->addDealer());
         updateQn.addActionListener(e->updateProductQn());
+        upadateDeal.addActionListener(e->updateDeal());
 
         // Add components to the frame
-        JPanel buttonPanel = new JPanel(new GridLayout(12, 1));
+        JPanel buttonPanel = new JPanel(new GridLayout(13, 1));
         buttonPanel.add(Refreshbtn);
         buttonPanel.add(viewProductsButton);
         buttonPanel.add(viewSalesButton);
@@ -63,6 +65,7 @@ public class ShopManagementApp extends JFrame {
         buttonPanel.add(delars);
         buttonPanel.add(adddealar);
         buttonPanel.add(updateQn);
+        buttonPanel.add(upadateDeal);
 
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -82,6 +85,8 @@ public class ShopManagementApp extends JFrame {
         setLocationRelativeTo(null); // Center the frame
         setVisible(true);
     }
+
+
 
     private void connectToDatabase() {
         try {
@@ -257,9 +262,24 @@ public class ShopManagementApp extends JFrame {
             ps.close();
         } catch (SQLException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error...", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error...");
         }
     }
+//    private void adminAll(){
+//        String password = new String();
+//        password = JOptionPane.showInputDialog(this,"enter admin password : ");
+//        if(password.equals("Ganesh2020")){
+//            JOptionPane.showMessageDialog(this,"okay go it..");
+//            String ans = new String();
+//            ans = JOptionPane.showInputDialog(this,"clear all sales agree or not..!");
+//            if(ans.equals("agree")) {
+//                PreparedStatement ps = connection.prepareStatement("delete * from ")
+//            }
+//
+//        }else {
+//            JOptionPane.showMessageDialog(this,"Invalid....!");
+//        }
+//    }
 
     private void showTodaySalesAmount() {
         try {
@@ -416,6 +436,57 @@ public class ShopManagementApp extends JFrame {
             JOptionPane.showMessageDialog(this,"error occurs tyr Again..!");
         }
     }
+    private void updateDeal(){
+        String sdId = JOptionPane.showInputDialog(this, "Enter update deal ID: ");
+        //int dId = Integer.parseInt(sdId);
+       if(sdId != null && !sdId.trim().isEmpty()) {
+           int dId = Integer.parseInt(sdId);
+           if (idExist(dId)) {
+               String uTotalAm = JOptionPane.showInputDialog(this, "Enter updated total deal amount: ");
+               String uPendingAm = JOptionPane.showInputDialog(this, "Enter updated pending amount: ");
+               int tAmount = Integer.parseInt(uTotalAm);
+               int PendAm = Integer.parseInt(uPendingAm);
+
+               // Query using CURDATE() for the current date
+               String query = "UPDATE delars SET total_price = ?, pending_amount = ?, stRecDate = CURDATE() WHERE id = ?;";
+
+               try {
+                   PreparedStatement ps = connection.prepareStatement(query);
+                   ps.setInt(1, tAmount);         // Set total_price
+                   ps.setInt(2, PendAm);          // Set pending_amount
+                   ps.setInt(3, dId);             // Set id in WHERE clause
+
+                   int rowsUpdated = ps.executeUpdate();
+                   if (rowsUpdated > 0) {
+                       JOptionPane.showMessageDialog(this, "Deal updated successfully.");
+                   } else {
+                       JOptionPane.showMessageDialog(this, "Deal update failed.");
+                   }
+               } catch (SQLException e) {
+                   JOptionPane.showMessageDialog(this, "An error occurred while updating the deal.");
+                   e.printStackTrace();
+               }
+           } else {
+               JOptionPane.showMessageDialog(this, "ID doesn't exist!");
+           }
+       }
+    }
+
+    public boolean idExist(int id) {
+        try {
+            PreparedStatement ps = connection.prepareStatement("select name from delars where id = ?");
+            ps.setInt(1,id);
+            ResultSet rs = ps.executeQuery();
+            if(rs.next()) {
+                return true;
+            }else {
+                return false;
+            }
+        }catch (SQLException e) {
+            //System.out.println("errror here..!!");
+        }
+        return false;
+    }
 // if some one click on ManageMach then then call this function then using this function i create the object of ManaageMachanics class then invoked tha
     // constructor
     private void manageMechanics() {
@@ -451,7 +522,7 @@ class ManageMechanicsFrame extends JFrame {
         addMechanicButton.addActionListener(e -> addMechanic());
         deleteMechanicButton.addActionListener(e -> deleteMechanic());
         showMechanicsButton.addActionListener(e -> viewMechanics());
-        updateMech.addActionListener(e->updateMechanic());
+        updateMech.addActionListener(e -> updateMechanic());
 
         JPanel buttonPanel = new JPanel(new GridLayout(4, 1));
         buttonPanel.add(addMechanicButton);
@@ -477,17 +548,17 @@ class ManageMechanicsFrame extends JFrame {
         if (name != null && !name.trim().isEmpty() && specialization != null && !specialization.trim().isEmpty()) {
             try {
                 String query = "INSERT INTO mechanics (name, specialization, contact_number) VALUES (?, ?, ?)";
-                PreparedStatement statement = connection.prepareStatement(query);
-                statement.setString(1, name);
-                statement.setString(2, specialization);
-                statement.setString(3, contactNumber);
-                int rowsInserted = statement.executeUpdate();
+                PreparedStatement ps = connection.prepareStatement(query);
+                ps.setString(1, name);
+                ps.setString(2, specialization);
+                ps.setString(3, contactNumber);
+                int rowsInserted = ps.executeUpdate();
                 if (rowsInserted > 0) {
                     JOptionPane.showMessageDialog(this, "Mechanic added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Failed to add mechanic.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-                statement.close();
+                ps.close();
             } catch (SQLException e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Error adding mechanic to database.", "Error", JOptionPane.ERROR_MESSAGE);
