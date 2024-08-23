@@ -22,3 +22,21 @@ CREATE TABLE stock (
     pid INT AUTO_INCREMENT PRIMARY KEY,
     st_name VARCHAR(255) NOT NULL
 );
+CREATE TABLE reminders (
+    id INT NOT NULL AUTO_INCREMENT,
+    reminder_name VARCHAR(255),
+    reminder_date DATE,
+    reminder_time TIME,
+    description TEXT,
+    is_shown TINYINT(1) DEFAULT 0,
+    PRIMARY KEY (id)
+);
+CREATE TABLE sales_record (
+    id INT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    total_price INT,
+    pending_amount INT,
+    stRecDate DATE,
+    PRIMARY KEY (id)
+);
+
