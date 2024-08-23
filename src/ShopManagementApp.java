@@ -13,6 +13,9 @@ public class ShopManagementApp extends JFrame {
     public ShopManagementApp() {
         super("_Ganesh Auto-Mobile Bambwade____");
 
+        Timer timer = new Timer(60000, e -> showUpcomingReminders());  // Check every minute for reminders
+        timer.start();
+
         // Initialize GUI components
         tableModel = new DefaultTableModel();
         table = new JTable(tableModel);
@@ -32,6 +35,7 @@ public class ShopManagementApp extends JFrame {
         JButton adddealar = new JButton("add Dealar");
         JButton updateQn = new JButton("updateQuantity");
         JButton upadateDeal = new JButton("updateDeal");
+        JButton addReminderButton = new JButton("Add Reminder");
 
         searchField = new JTextField();
 
@@ -50,9 +54,10 @@ public class ShopManagementApp extends JFrame {
         adddealar.addActionListener(e->addDealer());
         updateQn.addActionListener(e->updateProductQn());
         upadateDeal.addActionListener(e->updateDeal());
+        addReminderButton.addActionListener(e -> addReminder());
 
         // Add components to the frame
-        JPanel buttonPanel = new JPanel(new GridLayout(13, 1));
+        JPanel buttonPanel = new JPanel(new GridLayout(14, 1));
         buttonPanel.add(Refreshbtn);
         buttonPanel.add(viewProductsButton);
         buttonPanel.add(viewSalesButton);
@@ -66,6 +71,8 @@ public class ShopManagementApp extends JFrame {
         buttonPanel.add(adddealar);
         buttonPanel.add(updateQn);
         buttonPanel.add(upadateDeal);
+        buttonPanel.add(addReminderButton);
+
 
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -487,7 +494,65 @@ public class ShopManagementApp extends JFrame {
         }
         return false;
     }
-// if some one click on ManageMach then then call this function then using this function i create the object of ManaageMachanics class then invoked tha
+    private void addReminder() {
+        String reminderName = JOptionPane.showInputDialog(this, "Enter Reminder Name:");
+        String reminderDateStr = JOptionPane.showInputDialog(this, "Enter Reminder Date (YYYY-MM-DD):");
+        String reminderTimeStr = JOptionPane.showInputDialog(this, "Enter Reminder Time (HH:MM):");
+        String description = JOptionPane.showInputDialog(this, "Enter Description:");
+
+        try {
+            Date reminderDate = Date.valueOf(reminderDateStr);
+            Time reminderTime = Time.valueOf(reminderTimeStr + ":00");
+
+            String query = "INSERT INTO reminders (reminder_name, reminder_date, reminder_time, description) VALUES (?, ?, ?, ?)";
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setString(1, reminderName);
+            ps.setDate(2, reminderDate);
+            ps.setTime(3, reminderTime);
+            ps.setString(4, description);
+
+            int rowsInserted = ps.executeUpdate();
+            if (rowsInserted > 0) {
+                JOptionPane.showMessageDialog(this, "Reminder added successfully.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to add reminder.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error in adding reminder.");
+        }
+    }
+    private void showUpcomingReminders() {
+        String query = "SELECT * FROM reminders WHERE reminder_date = CURDATE() AND reminder_time > CURTIME() AND is_shown = 0";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(query);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String reminderName = rs.getString("reminder_name");
+                String description = rs.getString("description");
+
+                // Show reminder notification
+                JOptionPane.showMessageDialog(this, "Upcoming Reminder: " + reminderName + "\nDescription: " + description, "Reminder", JOptionPane.INFORMATION_MESSAGE);
+
+                // Mark the reminder as shown
+                int reminderId = rs.getInt("id");
+                PreparedStatement updatePs = connection.prepareStatement("UPDATE reminders SET is_shown = 1 WHERE id = ?");
+                updatePs.setInt(1, reminderId);
+                updatePs.executeUpdate();
+            }
+
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error in fetching reminders.");
+        }
+    }
+
+
+    // if some one click on ManageMach then then call this function then using this function i create the object of ManaageMachanics class then invoked tha
     // constructor
     private void manageMechanics() {
         // Open a new window for managing mechanics
@@ -499,6 +564,26 @@ public class ShopManagementApp extends JFrame {
 //        SwingUtilities.invokeLater(ShopManagementApp::new);
         ShopManagementApp Ganesh_auto = new ShopManagementApp();
     }
+}
+
+class Reminder {
+    private int id;
+    private String reminderName;
+    private Date reminderDate;
+    private Time reminderTime;
+    private String description;
+    private boolean isShown;
+
+    public Reminder(int id, String reminderName, Date reminderDate, Time reminderTime, String description, boolean isShown) {
+        this.id = id;
+        this.reminderName = reminderName;
+        this.reminderDate = reminderDate;
+        this.reminderTime = reminderTime;
+        this.description = description;
+        this.isShown = isShown;
+    }
+
+    // Getters and setters
 }
 
 class ManageMechanicsFrame extends JFrame {
