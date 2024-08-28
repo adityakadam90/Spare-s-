@@ -5,13 +5,13 @@ import java.awt.event.*;
 import java.sql.*;
 
 public class ShopManagementApp extends JFrame {
-    private Connection connection;
+    private Connection cn;
     private JTable table;
     private DefaultTableModel tableModel;
     private JTextField searchField;
 
     public ShopManagementApp() {
-        super("_Ganesh Auto-Mobile Bambwade____");
+        super("___Ganesh Auto-Mobile Bambwade____");
 
         Timer timer = new Timer(60000, e -> showUpcomingReminders());  // Check every minute for reminders
         timer.start();
@@ -31,9 +31,9 @@ public class ShopManagementApp extends JFrame {
         JButton showTodaySalesButton = new JButton("Today's Sales Amount");
         JButton manageMechanicsButton = new JButton("Manage Mechanics");
         JButton Refreshbtn = new JButton("Refresh");
+        JButton updateQn = new JButton("updateQuantity");
         JButton delars = new JButton("Delars_info");
         JButton adddealar = new JButton("add Dealar");
-        JButton updateQn = new JButton("updateQuantity");
         JButton upadateDeal = new JButton("updateDeal");
         JButton addReminderButton = new JButton("Add Reminder");
 
@@ -63,15 +63,15 @@ public class ShopManagementApp extends JFrame {
         buttonPanel.add(viewSalesButton);
         buttonPanel.add(addProductButton);
         buttonPanel.add(recordSaleButton);
+        buttonPanel.add(updateQn);
         buttonPanel.add(emptyStockbtn);
         buttonPanel.add(showemptyStockbtn);
-        buttonPanel.add(showTodaySalesButton);
         buttonPanel.add(manageMechanicsButton);
         buttonPanel.add(delars);
         buttonPanel.add(adddealar);
-        buttonPanel.add(updateQn);
         buttonPanel.add(upadateDeal);
         buttonPanel.add(addReminderButton);
+        buttonPanel.add(showTodaySalesButton);
 
 
         JPanel searchPanel = new JPanel(new BorderLayout());
@@ -100,9 +100,9 @@ public class ShopManagementApp extends JFrame {
             String url = "jdbc:mysql://localhost:3306/myshop2";
             String user = "root";
             String password = "@#aditya2006";
-            connection = DriverManager.getConnection(url, user, password);
+            cn = DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
-            e.printStackTrace();
+
             JOptionPane.showMessageDialog(this, "Failed to connect to the database.", "Error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
         }
@@ -110,7 +110,7 @@ public class ShopManagementApp extends JFrame {
 
     private void viewProducts() {
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = cn.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM products");
             tableModel.setColumnIdentifiers(new String[]{"ID", "Name", "Quantity", "Price"});
             tableModel.setRowCount(0); // Clear existing rows
@@ -125,14 +125,13 @@ public class ShopManagementApp extends JFrame {
             resultSet.close();
             statement.close();
         } catch (SQLException e) {
-            e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Failed to retrieve products.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void viewSales() {
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = cn.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM sales");
             tableModel.setColumnIdentifiers(new String[]{"ID", "Product ID", "Quantity", "Total Price", "Sale Date"});
             tableModel.setRowCount(0); // Clear existing rows
@@ -159,7 +158,7 @@ public class ShopManagementApp extends JFrame {
             try {
                 int quantity = Integer.parseInt(JOptionPane.showInputDialog(this, "Enter product quantity:"));
                 double price = Double.parseDouble(JOptionPane.showInputDialog(this, "Enter product price:"));
-                PreparedStatement statement = connection.prepareStatement("INSERT INTO products (name, quantity, price) VALUES (?, ?, ?)");
+                PreparedStatement statement = cn.prepareStatement("INSERT INTO products (name, quantity, price) VALUES (?, ?, ?)");
                 statement.setString(1, name);
                 statement.setInt(2, quantity);
                 statement.setDouble(3, price);
@@ -171,43 +170,52 @@ public class ShopManagementApp extends JFrame {
                 }
                 statement.close();
             } catch (SQLException | NumberFormatException e) {
-                e.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Invalid input.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
-
     private void recordSale() {
         String productIdStr = JOptionPane.showInputDialog(this, "Enter product ID:");
         if (productIdStr != null && !productIdStr.trim().isEmpty()) {
             try {
                 int productId = Integer.parseInt(productIdStr);
                 int quantitySold = Integer.parseInt(JOptionPane.showInputDialog(this, "Enter quantity sold:"));
-                double totalPrice = Double.parseDouble(JOptionPane.showInputDialog(this, "Enter total price:"));
+                String discountStr = JOptionPane.showInputDialog(this, "Enter discount percentage (e.g., 5 for 5%):");
+                double discount = (discountStr != null && !discountStr.trim().isEmpty()) ? Double.parseDouble(discountStr) : 0.0;
 
-                connection.setAutoCommit(false); // Start transaction
+                cn.setAutoCommit(false); // Start transaction
 
-                // Check product availability
-                PreparedStatement checkProductStmt = connection.prepareStatement("SELECT quantity FROM products WHERE id = ?");
+                // Check product availability and get price
+                PreparedStatement checkProductStmt = cn.prepareStatement("SELECT quantity, price FROM products WHERE id = ?");
                 checkProductStmt.setInt(1, productId);
                 ResultSet resultSet = checkProductStmt.executeQuery();
                 if (resultSet.next()) {
                     int currentQuantity = resultSet.getInt("quantity");
+                    double productPrice = resultSet.getDouble("price");
                     if (currentQuantity >= quantitySold) {
+                        // Calculate the original total price
+                        double originalTotalPrice = productPrice * quantitySold;
+                        // Apply discount
+                        double discountAmount = originalTotalPrice * (discount / 100);
+                        double calculatedTotalPrice = originalTotalPrice - discountAmount;
+
+                        // Show the calculated total price to the user
+                        JOptionPane.showMessageDialog(this, "Total price after applying " + discount + "% discount is: " + calculatedTotalPrice);
+
                         // Update product quantity
-                        PreparedStatement updateProductStmt = connection.prepareStatement("UPDATE products SET quantity = quantity - ? WHERE id = ?");
+                        PreparedStatement updateProductStmt = cn.prepareStatement("UPDATE products SET quantity = quantity - ? WHERE id = ?");
                         updateProductStmt.setInt(1, quantitySold);
                         updateProductStmt.setInt(2, productId);
                         updateProductStmt.executeUpdate();
 
                         // Record the sale
-                        PreparedStatement insertSaleStmt = connection.prepareStatement("INSERT INTO sales (product_id, quantity, total_price, sale_date) VALUES (?, ?, ?, CURDATE())");
+                        PreparedStatement insertSaleStmt = cn.prepareStatement("INSERT INTO sales (product_id, quantity, total_price, sale_date) VALUES (?, ?, ?, CURDATE())");
                         insertSaleStmt.setInt(1, productId);
                         insertSaleStmt.setInt(2, quantitySold);
-                        insertSaleStmt.setDouble(3, totalPrice);
+                        insertSaleStmt.setDouble(3, calculatedTotalPrice);
                         insertSaleStmt.executeUpdate();
 
-                        connection.commit(); // Commit transaction
+                        cn.commit(); // Commit transaction
                         JOptionPane.showMessageDialog(this, "Sale recorded successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                     } else {
                         JOptionPane.showMessageDialog(this, "Insufficient stock.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -216,13 +224,13 @@ public class ShopManagementApp extends JFrame {
                     JOptionPane.showMessageDialog(this, "Product not found.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
 
-                connection.setAutoCommit(true); // End transaction
+                cn.setAutoCommit(true); // End transaction
                 resultSet.close();
                 checkProductStmt.close();
             } catch (SQLException | NumberFormatException e) {
                 e.printStackTrace();
                 try {
-                    connection.rollback(); // Rollback transaction on error
+                    cn.rollback(); // Rollback transaction on error
                 } catch (SQLException rollbackEx) {
                     rollbackEx.printStackTrace();
                 }
@@ -236,7 +244,7 @@ public class ShopManagementApp extends JFrame {
         if (getProductName != null && !getProductName.trim().isEmpty()) {
             String q = "INSERT INTO stock (st_name) VALUES (?)";
             try {
-                PreparedStatement ps = connection.prepareStatement(q);
+                PreparedStatement ps = cn.prepareStatement(q);
                 ps.setString(1, getProductName);
                 int afr = ps.executeUpdate();
                 if (afr > 0) {
@@ -254,7 +262,7 @@ public class ShopManagementApp extends JFrame {
 
     private void showEmptyStock() {
         try {
-            PreparedStatement ps = connection.prepareStatement("select * from stock;");
+            PreparedStatement ps = cn.prepareStatement("select * from stock;");
             ResultSet rs = ps.executeQuery();
 //            ResultSet rs = st.executeQuery("SELECT * FROM stock");
             tableModel.setColumnIdentifiers(new String[]{"ID", "Stock Name"});
@@ -268,7 +276,6 @@ public class ShopManagementApp extends JFrame {
             rs.close();
             ps.close();
         } catch (SQLException e) {
-            e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error...");
         }
     }
@@ -277,9 +284,9 @@ public class ShopManagementApp extends JFrame {
 //        password = JOptionPane.showInputDialog(this,"enter admin password : ");
 //        if(password.equals("Ganesh2020")){
 //            JOptionPane.showMessageDialog(this,"okay go it..");
-//            String ans = new String();
-//            ans = JOptionPane.showInputDialog(this,"clear all sales agree or not..!");
-//            if(ans.equals("agree")) {
+//            String answer = new String();
+//            answer = JOptionPane.showInputDialog(this,"clear all sales agree or not..!");
+//            if(answer.equals("agree")) {
 //                PreparedStatement ps = connection.prepareStatement("delete * from ")
 //            }
 //
@@ -290,7 +297,7 @@ public class ShopManagementApp extends JFrame {
 
     private void showTodaySalesAmount() {
         try {
-            Statement st = connection.createStatement();
+            Statement st = cn.createStatement();
             ResultSet rs = st.executeQuery("SELECT SUM(total_price) AS total_amount FROM sales WHERE sale_date = CURDATE()");
             tableModel.setColumnIdentifiers(new String[]{"Today's Total Sales Amount"});
             tableModel.setRowCount(0); // Clear existing rows
@@ -310,21 +317,21 @@ public class ShopManagementApp extends JFrame {
     private void refresh() {
         String query = "SELECT name FROM products WHERE quantity = 0";
         try {
-            PreparedStatement ps = connection.prepareStatement(query);
+            PreparedStatement ps = cn.prepareStatement(query);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 String productName = rs.getString("name");
 
                 // Check if the product is already in the stock table
                 String checkQuery = "SELECT COUNT(*) FROM stock WHERE st_name = ?";
-                PreparedStatement checkStmt = connection.prepareStatement(checkQuery);
+                PreparedStatement checkStmt = cn.prepareStatement(checkQuery);
                 checkStmt.setString(1, productName);
                 ResultSet checkRs = checkStmt.executeQuery();
 
                 if (checkRs.next() && checkRs.getInt(1) == 0) {
                     // Product is not in stock table, so add it
                     String insertQuery = "INSERT INTO stock(st_name) VALUES(?)";
-                    PreparedStatement insertStmt = connection.prepareStatement(insertQuery);
+                    PreparedStatement insertStmt = cn.prepareStatement(insertQuery);
                     insertStmt.setString(1, productName);
                     int afr = insertStmt.executeUpdate();
                     if (afr > 0) {
@@ -351,7 +358,7 @@ public class ShopManagementApp extends JFrame {
         String searchTerm = searchField.getText();
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
             try {
-                PreparedStatement statement = connection.prepareStatement("SELECT * FROM products WHERE name LIKE ?");
+                PreparedStatement statement = cn.prepareStatement("SELECT * FROM products WHERE name LIKE ?");
                 statement.setString(1, "%" + searchTerm + "%");
                 ResultSet resultSet = statement.executeQuery();
                 tableModel.setColumnIdentifiers(new String[]{"ID", "Name", "Quantity", "Price"});
@@ -375,7 +382,7 @@ public class ShopManagementApp extends JFrame {
     private void Delars(){
         String query = "select * from delars;";
         try {
-            PreparedStatement ps = connection.prepareStatement(query);
+            PreparedStatement ps = cn.prepareStatement(query);
             ResultSet resultSet = ps.executeQuery();
             tableModel.setColumnIdentifiers(new String[]{"ID", "comp/dealar Name", "Last deal Tamount", "Pending amount", "deal Date"});
             tableModel.setRowCount(0); // Clear existing rows
@@ -398,7 +405,7 @@ public class ShopManagementApp extends JFrame {
     private void updateProductQn() {
         String query = "update products set quantity = ? where id = ?;";
         try {
-            PreparedStatement ps = connection.prepareStatement(query);
+            PreparedStatement ps = cn.prepareStatement(query);
             String pidstr = JOptionPane.showInputDialog(this,"enter product id : ");
            if(pidstr != null && !pidstr.trim().isEmpty()) {
                int pid = Integer.parseInt(pidstr);
@@ -421,7 +428,7 @@ public class ShopManagementApp extends JFrame {
     private void addDealer() {
         String query = "insert into delars(name,total_price,pending_amount,stRecDate) values(?,?,?,CURDATE());";
         try {
-            PreparedStatement ps = connection.prepareStatement(query);
+            PreparedStatement ps = cn.prepareStatement(query);
             String name = JOptionPane.showInputDialog(this,"enter dealar/company name: ");
             if(name != null && !name.trim().isEmpty()) {
                 int totAmount = Integer.parseInt(JOptionPane.showInputDialog(this, "enter total deal amount : "));
@@ -458,7 +465,7 @@ public class ShopManagementApp extends JFrame {
                String query = "UPDATE delars SET total_price = ?, pending_amount = ?, stRecDate = CURDATE() WHERE id = ?;";
 
                try {
-                   PreparedStatement ps = connection.prepareStatement(query);
+                   PreparedStatement ps = cn.prepareStatement(query);
                    ps.setInt(1, tAmount);         // Set total_price
                    ps.setInt(2, PendAm);          // Set pending_amount
                    ps.setInt(3, dId);             // Set id in WHERE clause
@@ -481,7 +488,7 @@ public class ShopManagementApp extends JFrame {
 
     public boolean idExist(int id) {
         try {
-            PreparedStatement ps = connection.prepareStatement("select name from delars where id = ?");
+            PreparedStatement ps = cn.prepareStatement("select name from delars where id = ?");
             ps.setInt(1,id);
             ResultSet rs = ps.executeQuery();
             if(rs.next()) {
@@ -496,37 +503,39 @@ public class ShopManagementApp extends JFrame {
     }
     private void addReminder() {
         String reminderName = JOptionPane.showInputDialog(this, "Enter Reminder Name:");
-        String reminderDateStr = JOptionPane.showInputDialog(this, "Enter Reminder Date (YYYY-MM-DD):");
-        String reminderTimeStr = JOptionPane.showInputDialog(this, "Enter Reminder Time (HH:MM):");
-        String description = JOptionPane.showInputDialog(this, "Enter Description:");
+        if(reminderName!= null && !reminderName.trim().isEmpty()) {
+            String reminderDateStr = JOptionPane.showInputDialog(this, "Enter Reminder Date (YYYY-MM-DD):");
+            String reminderTimeStr = JOptionPane.showInputDialog(this, "Enter Reminder Time (HH:MM):");
+            String description = JOptionPane.showInputDialog(this, "Enter Description:");
 
-        try {
-            Date reminderDate = Date.valueOf(reminderDateStr);
-            Time reminderTime = Time.valueOf(reminderTimeStr + ":00");
+            try {
+                Date reminderDate = Date.valueOf(reminderDateStr);
+                Time reminderTime = Time.valueOf(reminderTimeStr + ":00");
 
-            String query = "INSERT INTO reminders (reminder_name, reminder_date, reminder_time, description) VALUES (?, ?, ?, ?)";
-            PreparedStatement ps = connection.prepareStatement(query);
-            ps.setString(1, reminderName);
-            ps.setDate(2, reminderDate);
-            ps.setTime(3, reminderTime);
-            ps.setString(4, description);
+                String query = "INSERT INTO reminders (reminder_name, reminder_date, reminder_time, description) VALUES (?, ?, ?, ?)";
+                PreparedStatement ps = cn.prepareStatement(query);
+                ps.setString(1, reminderName);
+                ps.setDate(2, reminderDate);
+                ps.setTime(3, reminderTime);
+                ps.setString(4, description);
 
-            int rowsInserted = ps.executeUpdate();
-            if (rowsInserted > 0) {
-                JOptionPane.showMessageDialog(this, "Reminder added successfully.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to add reminder.");
+                int rowsInserted = ps.executeUpdate();
+                if (rowsInserted > 0) {
+                    JOptionPane.showMessageDialog(this, "Reminder added successfully.");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to add reminder.");
+                }
+            } catch (SQLException e) {
+
+                JOptionPane.showMessageDialog(this, "Error in adding reminder.");
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error in adding reminder.");
         }
     }
     private void showUpcomingReminders() {
         String query = "SELECT * FROM reminders WHERE reminder_date = CURDATE() AND reminder_time > CURTIME() AND is_shown = 0";
 
         try {
-            PreparedStatement ps = connection.prepareStatement(query);
+            PreparedStatement ps = cn.prepareStatement(query);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
@@ -538,7 +547,7 @@ public class ShopManagementApp extends JFrame {
 
                 // Mark the reminder as shown
                 int reminderId = rs.getInt("id");
-                PreparedStatement updatePs = connection.prepareStatement("UPDATE reminders SET is_shown = 1 WHERE id = ?");
+                PreparedStatement updatePs = cn.prepareStatement("UPDATE reminders SET is_shown = 1 WHERE id = ?");
                 updatePs.setInt(1, reminderId);
                 updatePs.executeUpdate();
             }
@@ -546,7 +555,7 @@ public class ShopManagementApp extends JFrame {
             rs.close();
             ps.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+
             JOptionPane.showMessageDialog(this, "Error in fetching reminders.");
         }
     }
@@ -557,7 +566,7 @@ public class ShopManagementApp extends JFrame {
     private void manageMechanics() {
         // Open a new window for managing mechanics
         //SwingUtilities.invokeLater(() -> new ManageMechanicsFrame(connection));
-        ManageMechanicsFrame mm = new ManageMechanicsFrame(connection);
+        ManageMechanicsFrame mm = new ManageMechanicsFrame(cn);
     }
 
     public static void main(String[] args) {
@@ -669,7 +678,7 @@ class ManageMechanicsFrame extends JFrame {
                 }
                 statement.close();
             } catch (SQLException | NumberFormatException e) {
-                e.printStackTrace();
+               // e.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Invalid input. Please enter a valid mechanic ID.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } else {
@@ -695,7 +704,6 @@ class ManageMechanicsFrame extends JFrame {
             resultSet.close();
             statement.close();
         } catch (SQLException e) {
-            e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Failed to retrieve mechanics.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -726,7 +734,6 @@ class ManageMechanicsFrame extends JFrame {
                     JOptionPane.showMessageDialog(this, "Name and specialization are required.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             } catch (NumberFormatException | SQLException e) {
-                e.printStackTrace();
                 JOptionPane.showMessageDialog(this, "Invalid input or failed to update mechanic.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
